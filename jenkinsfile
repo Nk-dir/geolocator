@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         IMAGE_NAME = "geolocator-app"
-        DOCKERHUB_USERNAME = "Nk-dir" // replace if different
+        DOCKERHUB_USERNAME = "nkdir" // replace if different
     }
     stages {
         stage('Build Docker Image') {
