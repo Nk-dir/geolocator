@@ -1,7 +1,3 @@
-cat <<'EOF' > Jenkinsfile
-// This is the complete Jenkinsfile with a dedicated "Test" stage.
-// This is a standard and professional pipeline structure.
-
 pipeline {
     agent any
 
@@ -13,15 +9,13 @@ pipeline {
 
     stages {
 
-        // STAGE 1: Run unit tests first to validate the code quality.
         stage('Test') {
             steps {
-                echo "Running Maven unit tests inside a temporary container..."
+                echo "Running Maven unit tests..."
                 sh 'docker run --rm -v "$(pwd)":/app -w /app maven:3.8-jdk-11 mvn test'
             }
         }
 
-        // STAGE 2: If tests pass, build the final Docker image.
         stage('Build') {
             steps {
                 echo "Building unique image: ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
@@ -30,7 +24,6 @@ pipeline {
             }
         }
 
-        // STAGE 3: If the build succeeds, push the image to the registry.
         stage('Push') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-password', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
@@ -42,7 +35,6 @@ pipeline {
             }
         }
 
-        // STAGE 4: If the push succeeds, deploy the new version.
         stage('Deploy') {
             steps {
                 echo "Running Ansible playbook to deploy the new container..."
@@ -58,4 +50,3 @@ pipeline {
         }
     }
 }
-EOF
