@@ -9,13 +9,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 // This annotation registers the servlet, so we don't need a web.xml entry
-@WebServlet("/api/v1/geolocate")
 public class GeoLocationServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private static final String API_URL = "http://ip-api.com/json/";
