@@ -3,5 +3,20 @@
  "http://java.sun.com/dtd/web-app_2_3.dtd" >
 
 <web-app>
-  <display-name>Archetype Created Web Application</display-name>
+  <display-name>GeoLocator Web Application</display-name>
+
+  <!-- 1. Define the Servlet -->
+  <servlet>
+    <servlet-name>GeoLocationServlet</servlet-name>
+    <!-- This must be the full class path to your servlet -->
+    <servlet-class>com.example.geolocator.servlets.GeoLocationServlet</servlet-class>
+  </servlet>
+
+  <!-- 2. Map the Servlet to a URL -->
+  <servlet-mapping>
+    <servlet-name>GeoLocationServlet</servlet-name>
+    <!-- This is the URL pattern that will trigger the servlet -->
+    <url-pattern>/api/v1/geolocate</url-pattern>
+  </servlet-mapping>
+
 </web-app>
