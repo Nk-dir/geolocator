@@ -12,7 +12,10 @@ pipeline {
         stage('Test') {
             steps {
                 echo "Running Maven unit tests..."
-                sh 'docker run --rm -v "$(pwd)":/app -w /app maven:3.8-jdk-11 mvn test'
+                // The -u flag tells Docker to run the command as the specified user:group ID.
+                // $(id -u) gets the user ID of the current user (which is 'jenkins' inside the pipeline).
+                // $(id -g) gets the group ID of the current user.
+                sh 'docker run --rm -u "$(id -u)":"$(id -g)" -v "$(pwd)":/app -w /app maven:3.8-jdk-11 mvn test'
             }
         }
 
