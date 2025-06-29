@@ -1,0 +1,26 @@
+# ansible/deploy.yml
+---
+- hosts: localhost
+  connection: local
+  become: yes
+  tasks:
+    - name: Pull the latest image from Docker Hub
+      community.docker.docker_image:
+        name: "nkdir/geolocator-app:latest"
+        source: pull
+        force_source: yes # Always pull the latest version
+
+    - name: Stop and remove the old application container
+      community.docker.docker_container:
+        name: geolocator-app
+        state: absent
+      ignore_errors: yes
+
+    - name: Run the application with the new image
+      community.docker.docker_container:
+        name: geolocator-app
+        image: "nkdir/geolocator-app:latest"
+        state: started
+        restart_policy: always
+        ports:
+          - "8888:8080"
