@@ -6,7 +6,7 @@ COPY src ./src
 RUN mvn clean install
 
 # Stage 2: Tomcat + Deployment
-FROM tomcat:9.0-jdk11-temurin
+FROM tomcat:10.1-jdk11-temurin
 RUN rm -rf /usr/local/tomcat/webapps/ROOT
 COPY --from=build /app/target/geolocator.war /usr/local/tomcat/webapps/geolocator.war
 EXPOSE 8080
