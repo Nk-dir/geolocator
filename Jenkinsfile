@@ -1,7 +1,4 @@
-Started by user karthik nakka
-Obtained Jenkinsfile from git https://github.com/Nk-dir/geolocator
-org.codehaus.groovy.control.MultipleCompilationErrorsException: startup failed:
-WorkflowScript: 20: unexpected token: ** @ line 20, column 70.
+cat <<'EOF' > Jenkinsfile
 // This is the complete Jenkinsfile with a dedicated "Test" stage.
 // This is a standard and professional pipeline structure.
 
@@ -17,11 +14,9 @@ pipeline {
     stages {
 
         // STAGE 1: Run unit tests first to validate the code quality.
-        // If this stage fails, the pipeline stops immediately.
         stage('Test') {
             steps {
                 echo "Running Maven unit tests inside a temporary container..."
-                // This command starts a fresh Maven container for a clean test environment.
                 sh 'docker run --rm -v "$(pwd)":/app -w /app maven:3.8-jdk-11 mvn test'
             }
         }
@@ -63,3 +58,4 @@ pipeline {
         }
     }
 }
+EOF
