@@ -13,9 +13,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import io.micrometer.core.instrument.Clock;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.graphite.GraphiteConfig;
 import io.micrometer.graphite.GraphiteMeterRegistry;
+// ... plus your other existing imports for servlet, http, etc.
 
 // NOTE: We have removed the @WebServlet annotation to rely on web.xml
 public class GeoLocationServlet extends HttpServlet {
@@ -55,46 +57,42 @@ public class GeoLocationServlet extends HttpServlet {
         String ipAddress = req.getParameter("ip");
 
         // THIS IS THE FIX: Check if meterRegistry exists before using it.
-        Timer.Sample sample = (this.meterRegistry != null) ? Timer.start(this.meterRegistry) : null;
-
+        // Start the timer. If meterRegistry is null (like in a unit test), this does nothing.
+    Timer.Sample sample = (this.meterRegistry != null) ? Timer.start(this.meterRegistry) : null;
+    
+    try {
         if (ipAddress == null || ipAddress.isBlank()) {
-            if (sample != null) {
-                sample.stop(this.meterRegistry.timer("geolocator.api.requests", "status", "bad_request"));
-            }
+            status = "bad_request";
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             resp.getWriter().write("{\"error\":\"IP parameter is missing\"}");
-            return;
+            return; // Exit early
         }
 
-        try {
-            HttpRequest apiRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL + ipAddress))
-                    .build();
+        HttpRequest apiRequest = HttpRequest.newBuilder()
+                .uri(URI.create(API_URL + ipAddress))
+                .build();
 
-            HttpResponse<String> apiResponse = httpClient.send(apiRequest, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> apiResponse = httpClient.send(apiRequest, HttpResponse.BodyHandlers.ofString());
 
-            resp.setStatus(HttpServletResponse.SC_OK);
-            resp.setContentType("application/json");
-            PrintWriter out = resp.getWriter();
-            out.print(apiResponse.body());
-            out.flush();
+        status = "success";
+        resp.setStatus(HttpServletResponse.SC_OK);
+        resp.setContentType("application/json");
+        PrintWriter out = resp.getWriter();
+        out.print(apiResponse.body());
+        out.flush();
 
-            if (sample != null) {
-                sample.stop(this.meterRegistry.timer("geolocator.api.requests", "status", "success"));
-            }
-
-        } catch (InterruptedException e) {
-            if (sample != null) {
-                sample.stop(this.meterRegistry.timer("geolocator.api.requests", "status", "interrupted"));
-            }
-            Thread.currentThread().interrupt();
-            throw new ServletException("API request was interrupted", e);
-        } catch (Exception e) {
-            if (sample != null) {
-                sample.stop(this.meterRegistry.timer("geolocator.api.requests", "status", "failure"));
-            }
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            resp.getWriter().write("{\"error\":\"Failed to fetch geo-location data\"}");
+    } catch (InterruptedException e) {
+        status = "interrupted";
+        Thread.currentThread().interrupt();
+        throw new ServletException("API request was interrupted", e);
+    } catch (Exception e) {
+        status = "failure";
+        resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        resp.getWriter().write("{\"error\":\"Failed to fetch geo-location data\"}");
+    } finally {
+        // This block ALWAYS runs, ensuring we record the metric.
+        if (sample != null) {
+            sample.stop(this.meterRegistry.timer("geolocator.api.requests", "status", status));
         }
     }
 }
