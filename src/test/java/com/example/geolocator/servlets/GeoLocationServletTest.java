@@ -24,8 +24,8 @@ class GeoLocationServletTest {
     @BeforeEach
     void setUp() throws Exception {
         servlet = new GeoLocationServlet();
-        request = mock(HttpServletRequest.class);
-        response = mock(HttpServletResponse.class);
+        request = mock(jakarta.servlet.http.HttpServletRequest.class);
+        response = mock(jakarta.servlet.http.HttpServletResponse.class);
         responseWriter = new StringWriter();
 
         PrintWriter printWriter = new PrintWriter(responseWriter);
