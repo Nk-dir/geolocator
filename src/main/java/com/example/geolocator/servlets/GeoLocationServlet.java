@@ -1,47 +1,20 @@
-package com.example.geolocator.servlets;
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_5_0.xsd"
+         version="5.0">
+    
+    <display-name>GeoLocator Web Application</display-name>
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+    <!-- This gives a direct, explicit order to Tomcat -->
+    <servlet>
+        <servlet-name>GeoLocationAPIServlet</servlet-name>
+        <servlet-class>com.example.geolocator.servlets.GeoLocationServlet</servlet-class>
+    </servlet>
 
-import java.io.IOException;
-import java.io.PrintWriter;
-
-public class GeoLocationServlet extends HttpServlet {
-
-    private MeterRegistry meterRegistry;
-    private Counter requestCounter;
-
-    public void setMeterRegistry(MeterRegistry meterRegistry) {
-        this.meterRegistry = meterRegistry;
-    }
-
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-
-        if (meterRegistry != null && requestCounter != null) {
-            requestCounter.increment();
-        }
-
-        String ip = request.getParameter("ip");
-
-        response.setContentType("application/json");
-        PrintWriter out = response.getWriter();
-
-        if (ip == null || ip.isEmpty()) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            out.write("{\"error\": \"IP parameter is missing\"}");
-            return;
-        }
-
-        // Mock location data (you can replace this with real lookup logic)
-        String mockLocation = "{ \"ip\": \"" + ip + "\", \"location\": \"Hyderabad, India\" }";
-
-        response.setStatus(HttpServletResponse.SC_OK);
-        out.write(mockLocation);
-    }
-}
+    <servlet-mapping>
+        <servlet-name>GeoLocationAPIServlet</servlet-name>
+        <url-pattern>/api/v1/geolocate</url-pattern>
+    </servlet-mapping>
+    
+</web-app>
