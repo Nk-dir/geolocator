@@ -1,94 +1,73 @@
 package com.example.geolocator.servlets;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.lang.reflect.Field;
 
-import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.Timer;
-import io.micrometer.graphite.GraphiteConfig;
-import io.micrometer.graphite.GraphiteMeterRegistry;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
-public class GeoLocationServlet extends HttpServlet {
-    private static final long serialVersionUID = 1L;
-    private static final String API_URL = "http://ip-api.com/json/";
+public class GeoLocationServletTest {
+
+    // The servlet we are going to test
+    private GeoLocationServlet servlet;
+
+    // We create MOCKS for all external dependencies
+    @Mock
+    private MeterRegistry meterRegistry;
+    @Mock
+    private HttpServletRequest request;
+    @Mock
+    private HttpServletResponse response;
     
-    private final HttpClient httpClient = HttpClient.newHttpClient();
-    private GraphiteMeterRegistry meterRegistry;
+    private StringWriter stringWriter;
 
-    @Override
-    public void init() throws ServletException {
-        super.init();
-        
-        GraphiteConfig config = new GraphiteConfig() {
-            @Override
-            public String host() {
-                return System.getenv().getOrDefault("GRAPHITE_HOST", "localhost");
-            }
-            
-            @Override
-            public int port() {
-                return Integer.parseInt(System.getenv().getOrDefault("GRAPHITE_PORT", "2003"));
-            }
+    @BeforeEach
+    public void setUp() throws Exception {
+        // Initialize all the @Mock objects in this class
+        MockitoAnnotations.openMocks(this);
 
-            @Override
-            public String get(String key) {
-                return null;
-            }
-        };
+        // Create a real instance of our servlet
+        servlet = new GeoLocationServlet();
 
-        this.meterRegistry = new GraphiteMeterRegistry(config, Clock.SYSTEM);
-        System.out.println("Micrometer Graphite registry initialized.");
+        // THIS IS THE FIX: Manually inject the mock MeterRegistry into the servlet.
+        // We use Java Reflection to set the private 'meterRegistry' field.
+        Field meterRegistryField = GeoLocationServlet.class.getDeclaredField("meterRegistry");
+        meterRegistryField.setAccessible(true);
+        meterRegistryField.set(servlet, meterRegistry);
+
+        // Set up our fake response writer
+        stringWriter = new StringWriter();
+        PrintWriter writer = new PrintWriter(stringWriter);
+        when(response.getWriter()).thenReturn(writer);
     }
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String ipAddress = req.getParameter("ip");
+    @Test
+    public void testDoGet_whenIpParameterIsMissing_returnsBadRequest() throws Exception {
+        // ARRANGE
+        when(request.getParameter("ip")).thenReturn(null);
         
-        String status = "unknown"; 
-        Timer.Sample sample = (this.meterRegistry != null) ? Timer.start(this.meterRegistry) : null;
+        // We still need to tell the mock meterRegistry how to behave when called
+        Timer mockTimer = mock(Timer.class);
+        when(meterRegistry.timer(anyString(), anyString(), anyString())).thenReturn(mockTimer);
         
-        try {
-            if (ipAddress == null || ipAddress.isBlank()) {
-                status = "bad_request";
-                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                resp.getWriter().write("{\"error\":\"IP parameter is missing\"}");
-                return;
-            }
+        // ACT
+        servlet.doGet(request, response);
 
-            HttpRequest apiRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL + ipAddress))
-                    .build();
-
-            HttpResponse<String> apiResponse = httpClient.send(apiRequest, HttpResponse.BodyHandlers.ofString());
-
-            status = "success";
-            resp.setStatus(HttpServletResponse.SC_OK);
-            resp.setContentType("application/json");
-            PrintWriter out = resp.getWriter();
-            out.print(apiResponse.body());
-            out.flush();
-
-        } catch (InterruptedException e) {
-            status = "interrupted";
-            Thread.currentThread().interrupt();
-            throw new ServletException("API request was interrupted", e);
-        } catch (Exception e) {
-            status = "failure";
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            resp.getWriter().write("{\"error\":\"Failed to fetch geo-location data\"}");
-        } finally {
-            if (sample != null) {
-                sample.stop(this.meterRegistry.timer("geolocator.api.requests", "status", status));
-            }
-        }
+        // ASSERT
+        verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        assertTrue(stringWriter.toString().contains("IP parameter is missing"));
+        verify(meterRegistry).timer("geolocator.api.requests", "status", "bad_request");
     }
 }
