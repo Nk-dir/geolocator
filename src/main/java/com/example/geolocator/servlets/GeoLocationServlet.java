@@ -20,7 +20,7 @@ public class GeoLocationServlet extends HttpServlet {
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private MeterRegistry meterRegistry;
 
-    // Setter for test injection
+    // Setter for injection in tests
     public void setMeterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
     }
