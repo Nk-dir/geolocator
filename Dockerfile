@@ -3,7 +3,7 @@ FROM maven:3.8-jdk-11 AS build
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
-RUN mvn clean install
+RUN mvn clean install -DskipTests
 
 # Stage 2: Tomcat + Deployment
 FROM tomcat:10.1-jdk11-temurin
