@@ -1,38 +1,61 @@
 package com.example.geolocator.servlets;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 public class GeoLocationServletTest {
+
+    @Mock
+    private MeterRegistry meterRegistry;
+
+    @InjectMocks
+    private GeoLocationServlet servlet;
+
+    @Mock
+    private HttpServletRequest request;
+    @Mock
+    private HttpServletResponse response;
+    
+    private StringWriter stringWriter;
+
+    @BeforeEach
+    public void setUp() throws Exception {
+        stringWriter = new StringWriter();
+        PrintWriter writer = new PrintWriter(stringWriter);
+        when(response.getWriter()).thenReturn(writer);
+    }
 
     @Test
     public void testDoGet_whenIpParameterIsMissing_returnsBadRequest() throws Exception {
-        // ARRANGE: Create the servlet instance and mock its dependencies
-        GeoLocationServlet servlet = new GeoLocationServlet();
-        HttpServletRequest request = mock(HttpServletRequest.class);
-        HttpServletResponse response = mock(HttpServletResponse.class);
-        
-        // This allows us to capture what the servlet writes in its response
-        StringWriter stringWriter = new StringWriter();
-        PrintWriter writer = new PrintWriter(stringWriter);
-        
-        // Tell Mockito how our mocked objects should behave
-        when(response.getWriter()).thenReturn(writer);
+        // ARRANGE
         when(request.getParameter("ip")).thenReturn(null);
 
-        // ACT: Run the method we want to test
+        Timer mockTimer = mock(Timer.class);
+        when(meterRegistry.timer(anyString(), anyString(), anyString())).thenReturn(mockTimer);
+        
+        // ACT
         servlet.doGet(request, response);
 
-        // ASSERT: Check if the results are what we expect
-        // 1. Verify that the servlet set the HTTP status to "Bad Request"
+        // ASSERT
         verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        // 2. Verify that the error message was written to the response
         assertTrue(stringWriter.toString().contains("IP parameter is missing"));
+        verify(meterRegistry).timer("geolocator.api.requests", "status", "bad_request");
     }
 }
