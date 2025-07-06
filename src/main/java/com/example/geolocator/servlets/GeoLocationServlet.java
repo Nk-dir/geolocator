@@ -1,7 +1,7 @@
 package com.example.geolocator.servlets;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,66 +9,40 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 
 public class GeoLocationServlet extends HttpServlet {
 
-    private static final String API_URL = "http://ip-api.com/json/";
-    private final HttpClient httpClient = HttpClient.newHttpClient();
     private MeterRegistry meterRegistry;
+    private Counter requestCounter;
 
-    // Setter for injection in tests
     public void setMeterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
+        this.requestCounter = meterRegistry.counter("geolocation_requests_total");
     }
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String ipAddress = req.getParameter("ip");
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
 
-        String status = "unknown";
-        Timer.Sample sample = null;
-
-        if (this.meterRegistry != null) {
-            sample = Timer.start(this.meterRegistry);
+        if (meterRegistry != null && requestCounter != null) {
+            requestCounter.increment();
         }
 
-        try {
-            if (ipAddress == null || ipAddress.isBlank()) {
-                status = "bad_request";
-                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                resp.getWriter().write("{\"error\":\"IP parameter is missing\"}");
-                return;
-            }
+        String ip = request.getParameter("ip");
 
-            HttpRequest apiRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL + ipAddress))
-                    .build();
+        response.setContentType("application/json");
+        PrintWriter out = response.getWriter();
 
-            HttpResponse<String> apiResponse = httpClient.send(apiRequest, HttpResponse.BodyHandlers.ofString());
-
-            status = "success";
-            resp.setStatus(HttpServletResponse.SC_OK);
-            resp.setContentType("application/json");
-            PrintWriter out = resp.getWriter();
-            out.print(apiResponse.body());
-            out.flush();
-
-        } catch (InterruptedException e) {
-            status = "interrupted";
-            Thread.currentThread().interrupt();
-            throw new ServletException("API request was interrupted", e);
-        } catch (Exception e) {
-            status = "failure";
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            resp.getWriter().write("{\"error\":\"Failed to fetch geo-location data\"}");
-        } finally {
-            if (sample != null && meterRegistry != null) {
-                sample.stop(meterRegistry.timer("geolocator.api.requests", "status", status));
-            }
+        if (ip == null || ip.isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.write("{\"error\": \"IP parameter is missing\"}");
+            return;
         }
+
+        // Mock location data (you can replace this with real lookup logic)
+        String mockLocation = "{ \"ip\": \"" + ip + "\", \"location\": \"Hyderabad, India\" }";
+
+        response.setStatus(HttpServletResponse.SC_OK);
+        out.write(mockLocation);
     }
 }
