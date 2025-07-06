@@ -2,7 +2,6 @@ package com.example.geolocator.servlets;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,10 +16,14 @@ import java.net.http.HttpResponse;
 
 public class GeoLocationServlet extends HttpServlet {
 
-    private static final String API_URL = "https://ipapi.co/";
+    private static final String API_URL = "http://ip-api.com/json/";
     private final HttpClient httpClient = HttpClient.newHttpClient();
+    private MeterRegistry meterRegistry;
 
-    MeterRegistry meterRegistry;
+    // Setter for test injection
+    public void setMeterRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
+    }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -63,14 +66,9 @@ public class GeoLocationServlet extends HttpServlet {
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             resp.getWriter().write("{\"error\":\"Failed to fetch geo-location data\"}");
         } finally {
-            if (sample != null && this.meterRegistry != null) {
-                sample.stop(this.meterRegistry.timer("geolocator.api.requests", "status", status));
+            if (sample != null && meterRegistry != null) {
+                sample.stop(meterRegistry.timer("geolocator.api.requests", "status", status));
             }
         }
-    }
-
-    // Setter for testing
-    public void setMeterRegistry(MeterRegistry meterRegistry) {
-        this.meterRegistry = meterRegistry;
     }
 }

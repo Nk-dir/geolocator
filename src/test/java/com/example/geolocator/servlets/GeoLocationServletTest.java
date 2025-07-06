@@ -1,53 +1,74 @@
 package com.example.geolocator.servlets;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.Mock;
-
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
+public class GeoLocationServlet extends HttpServlet {
 
-@ExtendWith(MockitoExtension.class)
-public class GeoLocationServletTest {
-
-    @Mock
+    private static final String API_URL = "http://ip-api.com/json/";
+    private final HttpClient httpClient = HttpClient.newHttpClient();
     private MeterRegistry meterRegistry;
 
-    @Test
-    public void testDoGet_whenIpParameterIsMissing_returnsBadRequest() throws Exception {
-        // Create and inject mock MeterRegistry
-        GeoLocationServlet servlet = new GeoLocationServlet();
-        servlet.setMeterRegistry(meterRegistry);
+    // Setter for test injection
+    public void setMeterRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
+    }
 
-        // Mock request and response
-        HttpServletRequest request = mock(HttpServletRequest.class);
-        HttpServletResponse response = mock(HttpServletResponse.class);
-        StringWriter stringWriter = new StringWriter();
-        PrintWriter writer = new PrintWriter(stringWriter);
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        String ipAddress = req.getParameter("ip");
 
-        when(request.getParameter("ip")).thenReturn(null);
-        when(response.getWriter()).thenReturn(writer);
+        String status = "unknown";
+        Timer.Sample sample = null;
 
-        // Mock Timer
-        Timer mockTimer = mock(Timer.class);
-        when(meterRegistry.timer(anyString(), anyString(), anyString())).thenReturn(mockTimer);
+        if (this.meterRegistry != null) {
+            sample = Timer.start(this.meterRegistry);
+        }
 
-        // Call the servlet
-        servlet.doGet(request, response);
+        try {
+            if (ipAddress == null || ipAddress.isBlank()) {
+                status = "bad_request";
+                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                resp.getWriter().write("{\"error\":\"IP parameter is missing\"}");
+                return;
+            }
 
-        // Assertions
-        verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        assertTrue(stringWriter.toString().contains("IP parameter is missing"));
-        verify(meterRegistry).timer("geolocator.api.requests", "status", "bad_request");
+            HttpRequest apiRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(API_URL + ipAddress))
+                    .build();
+
+            HttpResponse<String> apiResponse = httpClient.send(apiRequest, HttpResponse.BodyHandlers.ofString());
+
+            status = "success";
+            resp.setStatus(HttpServletResponse.SC_OK);
+            resp.setContentType("application/json");
+            PrintWriter out = resp.getWriter();
+            out.print(apiResponse.body());
+            out.flush();
+
+        } catch (InterruptedException e) {
+            status = "interrupted";
+            Thread.currentThread().interrupt();
+            throw new ServletException("API request was interrupted", e);
+        } catch (Exception e) {
+            status = "failure";
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            resp.getWriter().write("{\"error\":\"Failed to fetch geo-location data\"}");
+        } finally {
+            if (sample != null && meterRegistry != null) {
+                sample.stop(meterRegistry.timer("geolocator.api.requests", "status", status));
+            }
+        }
     }
 }
