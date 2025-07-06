@@ -27,6 +27,6 @@ public class GeoLocationServletTest {
 
         // Assert
         verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        assertTrue(stringWriter.toString().contains("IP parameter is missing"));
+        assertTrue(stringWriter.toString().contains("Missing IP parameter"));
     }
 }
