@@ -25,4 +25,4 @@
         ports:
           - "8888:8080"
         env:
-          MY_ENV: "production"
+          GRAPHITE_HOST: graphite
