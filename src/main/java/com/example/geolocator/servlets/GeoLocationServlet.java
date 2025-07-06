@@ -17,7 +17,6 @@ public class GeoLocationServlet extends HttpServlet {
 
     public void setMeterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
-        this.requestCounter = meterRegistry.counter("geolocation_requests_total");
     }
 
     @Override
