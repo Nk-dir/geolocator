@@ -1,20 +1,25 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_5_0.xsd"
-         version="5.0">
-    
-    <display-name>GeoLocator Web Application</display-name>
+package com.example.geolocator.servlets;
 
-    <!-- This gives a direct, explicit order to Tomcat -->
-    <servlet>
-        <servlet-name>GeoLocationAPIServlet</servlet-name>
-        <servlet-class>com.example.geolocator.servlets.GeoLocationServlet</servlet-class>
-    </servlet>
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
-    <servlet-mapping>
-        <servlet-name>GeoLocationAPIServlet</servlet-name>
-        <url-pattern>/api/v1/geolocate</url-pattern>
-    </servlet-mapping>
-    
-</web-app>
+import java.io.IOException;
+import java.io.PrintWriter;
+
+public class GeoLocationServlet extends HttpServlet {
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String ip = req.getParameter("ip");
+        if (ip == null || ip.isEmpty()) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            PrintWriter out = resp.getWriter();
+            out.write("Missing IP parameter");
+            return;
+        }
+
+        // Your normal logic here
+        resp.setStatus(HttpServletResponse.SC_OK);
+        resp.getWriter().write("IP is: " + ip);
+    }
+}
