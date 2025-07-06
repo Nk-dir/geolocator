@@ -1,5 +1,10 @@
 package com.example.geolocator.servlets;
+import jakarta.servlet.http.HttpServletResponse;
 
+// ADD THESE THREE LINES
+import io.micrometer.core.instrument.Clock;
+import io.micrometer.graphite.GraphiteConfig;
+import io.micrometer.graphite.GraphiteMeterRegistry;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.graphite.GraphiteMeterRegistry;
