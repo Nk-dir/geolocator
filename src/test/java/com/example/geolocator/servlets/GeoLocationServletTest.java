@@ -20,7 +20,7 @@ public class GeoLocationServletTest {
         PrintWriter writer = new PrintWriter(stringWriter);
 
         when(response.getWriter()).thenReturn(writer);
-        when(request..getParameter("ip")).thenReturn(null);
+        when(request.getParameter("ip")).thenReturn(null);
 
         // Act
         servlet.doGet(request, response);
